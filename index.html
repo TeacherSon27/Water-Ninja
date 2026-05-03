@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Water Ninja</title>
+    <link rel="stylesheet" href="styles.css">
+  <base target="_blank">
+</head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="controls-left" aria-label="Game controls left">
+          <button id="startButton" class="control-button primary" type="button">
+            <span aria-hidden="true">&#9654;</span>
+            <span>Start</span>
+          </button>
+          <button id="pauseButton" class="control-button" type="button">
+            <span aria-hidden="true">&#10074;&#10074;</span>
+            <span>Pause</span>
+          </button>
+          <button id="endGameButton" class="control-button" type="button" aria-label="End the game" title="End the game">
+            <span aria-hidden="true">&#10006;</span>
+            <span>End The Game</span>
+          </button>
+        </div>
+
+        <div class="brand">
+          <img src="assets/water.png" alt="" aria-hidden="true">
+          <div>
+            <h1>Water Ninja</h1>
+          </div>
+        </div>
+
+        <div class="controls-right" aria-label="Game controls right">
+          <button id="resetButton" class="control-button" type="button" aria-label="Reset game" title="Reset">
+            <span aria-hidden="true">&#8635;</span>
+            <span>Reset</span>
+          </button>
+          <button id="fullscreenButton" class="control-button wide" type="button" aria-label="Full screen" title="Full screen">
+            <span aria-hidden="true">&#9974;</span>
+            <span>Full Screen</span>
+          </button>
+        </div>
+      </header>
+
+      <main id="arena" class="arena" aria-label="Two-player game area">
+        <canvas id="gameCanvas"></canvas>
+        <div class="center-divider" aria-hidden="true"></div>
+
+        <section class="player-hud player-one" aria-label="Player 1">
+          <div class="hud-row">
+            <div class="player-name">Player 1</div>
+            <div class="prompt-card">
+              <div class="target-line">
+                <span>Find:</span>
+                <strong id="target-0">rain</strong>
+              </div>
+              <p id="pattern-0">Water comes from ____.</p>
+              <p id="answer-0" class="answer" aria-live="polite"></p>
+            </div>
+            <div class="stat">
+              <span>Score</span>
+              <strong id="score-0">0</strong>
+            </div>
+            <div class="stat">
+              <span>Round</span>
+              <strong id="round-0">1/3</strong>
+            </div>
+            <div class="stat">
+              <span>Time</span>
+              <strong id="time-0">20</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="player-hud player-two" aria-label="Player 2">
+          <div class="hud-row">
+            <div class="player-name">Player 2</div>
+            <div class="prompt-card">
+              <div class="target-line">
+                <span>Find:</span>
+                <strong id="target-1">sea</strong>
+              </div>
+              <p id="pattern-1">Water comes from the ____.</p>
+              <p id="answer-1" class="answer" aria-live="polite"></p>
+            </div>
+            <div class="stat">
+              <span>Score</span>
+              <strong id="score-1">0</strong>
+            </div>
+            <div class="stat">
+              <span>Round</span>
+              <strong id="round-1">1/3</strong>
+            </div>
+            <div class="stat">
+              <span>Time</span>
+              <strong id="time-1">20</strong>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="accessOverlay" class="access-overlay" aria-live="polite">
+      <div class="cover-images" aria-hidden="true">
+        <img class="cover-image cover-image-a" src="assets/rain.png" alt="">
+        <img class="cover-image cover-image-b" src="assets/sea.png" alt="">
+        <img class="cover-image cover-image-c" src="assets/save-water.png" alt="">
+        <img class="cover-image cover-image-d" src="assets/washing.png" alt="">
+        <img class="cover-image cover-image-e" src="assets/ice.png" alt="">
+        <img class="cover-image cover-image-f" src="assets/tap.png" alt="">
+      </div>
+
+      <section class="access-card" aria-label="Game access">
+        <div class="access-brand">
+          <img src="assets/water.png" alt="" aria-hidden="true">
+          <h2>Water Ninja</h2>
+        </div>
+
+        <form id="accessForm" class="access-form">
+          <label for="accessCode">Code</label>
+          <div class="access-entry">
+            <input id="accessCode" class="access-input" type="text" autocomplete="off" maxlength="12" spellcheck="false">
+            <button class="access-button" type="submit">Enter</button>
+          </div>
+          <p id="accessMessage" class="access-message" aria-live="assertive"></p>
+        </form>
+      </section>
+    </div>
+
+    <div id="winnerOverlay" class="winner-overlay" aria-live="polite" hidden>
+      <canvas id="celebrationCanvas" class="celebration-canvas" aria-hidden="true"></canvas>
+      <div class="winner-announcement">
+        <div id="winnerTitle" class="winner-title">WINNER</div>
+        <div id="winnerScore" class="winner-score">P1 0 - P2 0</div>
+        <button id="winnerResetButton" class="control-button primary wide" type="button" aria-label="Reset game" title="Reset Game" style="margin-top: 12px; cursor: pointer;">
+          <span aria-hidden="true">&#8635;</span>
+          <span>Reset Game</span>
+        </button>
+      </div>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
