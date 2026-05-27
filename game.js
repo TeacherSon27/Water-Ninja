@@ -202,14 +202,18 @@
       return;
     }
 
+    const wasOnePlayer = isOnePlayerMode();
     state.playerMode = mode;
     state.items = state.items.filter((item) => activePlayerIndexes().includes(item.playerIndex));
     state.trails.clear();
 
-    if (!isOnePlayerMode() && state.players[1].timeLeft <= 0 && state.players[0].timeLeft > 0) {
-      state.players[1].timeLeft = state.players[0].timeLeft;
-      state.players[1].answerText = state.players[1].answerText || "Go";
-      state.players[1].answerTone = "";
+    if (wasOnePlayer && !isOnePlayerMode()) {
+      const playerOne = state.players[0];
+      const playerTwo = state.players[1];
+      playerTwo.timeLeft = playerOne.timeLeft;
+      playerTwo.nextSpawn = Math.min(playerTwo.nextSpawn, 0.25);
+      playerTwo.answerText = playerTwo.answerText || (state.running ? "Go" : "");
+      playerTwo.answerTone = "";
     }
 
     syncPlayerModeUi();
