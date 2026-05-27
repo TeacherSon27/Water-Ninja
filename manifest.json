@@ -1,0 +1,9 @@
+{
+  "name": "Water Ninja",
+  "short_name": "Water Ninja",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#bcefff",
+  "theme_color": "#0877d6",
+  "start_url": "./"
+}

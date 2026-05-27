@@ -1311,3 +1311,42 @@
   });
   requestAnimationFrame(loop);
 })();
+
+  function isStandaloneIOS() {
+    return (
+      window.navigator.standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches
+    );
+  }
+
+  async function enterFullscreen() {
+    const el = document.documentElement;
+    try {
+      if (el.requestFullscreen) {
+        await el.requestFullscreen({ navigationUI: "hide" });
+      } else if (el.webkitRequestFullscreen) {
+        await el.webkitRequestFullscreen();
+      }
+    } catch (e) {}
+  }
+
+  async function exitFullscreen() {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen();
+      }
+    } catch (e) {}
+  }
+
+  function suppressIOSBottomGesture(e) {
+    const h = window.innerHeight;
+    const y = e.touches?.[0]?.clientY ?? e.clientY ?? 0;
+    if (y > h - 60) {
+      e.preventDefault();
+    }
+  }
+
+  document.addEventListener("touchstart", suppressIOSBottomGesture, { passive: false });
+  document.addEventListener("touchmove", suppressIOSBottomGesture, { passive: false });
