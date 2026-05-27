@@ -2,15 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+    <meta name="theme-color" content="#0877d6">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Water Ninja">
+    <meta name="format-detection" content="telephone=no">
     <link rel="manifest" href="manifest.json">
     <title>Water Ninja</title>
+    <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="styles.css">
-  
-</head>
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
@@ -23,9 +28,9 @@
             <span aria-hidden="true">&#10074;&#10074;</span>
             <span>Pause</span>
           </button>
-          <button id="endGameButton" class="control-button" type="button" aria-label="End the game" title="End the game">
+          <button id="endGameButton" class="control-button compact" type="button" aria-label="End the game" title="End the game">
             <span aria-hidden="true">&#10006;</span>
-            <span>End The Game</span>
+            <span>End</span>
           </button>
         </div>
 
@@ -41,14 +46,18 @@
             <span aria-hidden="true">&#8635;</span>
             <span>Reset</span>
           </button>
-          <button id="fullscreenButton" class="control-button wide" type="button" aria-label="Full screen" title="Full screen">
+          <button id="modeToggleButton" class="control-button mode-toggle" type="button" aria-label="Switch to One Player Mode" aria-pressed="false" title="Switch to One Player Mode">
+            <span aria-hidden="true">1P</span>
+            <span>One Player</span>
+          </button>
+          <button id="fullscreenButton" class="icon-button fullscreen-toggle" type="button" aria-label="Full screen" aria-pressed="false" title="Full screen">
             <span aria-hidden="true">&#9974;</span>
-            <span>Full Screen</span>
+            <span class="sr-only">Full Screen</span>
           </button>
         </div>
       </header>
 
-      <main id="arena" class="arena" aria-label="Two-player game area">
+      <main id="arena" class="arena two-player" aria-label="Two-player game area">
         <canvas id="gameCanvas"></canvas>
         <div class="center-divider" aria-hidden="true"></div>
 

@@ -7,6 +7,10 @@
   const CELEBRATION_CONFETTI_COUNT = 3000;
   const CELEBRATION_STAR_COUNT = 300;
   const ACCESS_CODE = "WATER";
+  const PLAYER_MODE = {
+    ONE: "one",
+    TWO: "two"
+  };
   const CANVAS_FONT = '"UD Digi Kyokasho NP-B", "UD Digi Kyokasho N-B", "UD Digi Kyokasho NK-B", "Hiragino Maru Gothic ProN", "Yu Gothic", Arial, sans-serif';
   const CELEBRATION_COLORS = ["#ffcf4a", "#ffffff", "#5ee7ff", "#00a9a5", "#ef5b9a", "#7b61d8", "#44aa52", "#ff7a1a"];
   const TERMS = [
@@ -112,7 +116,10 @@
   const startButton = document.getElementById("startButton");
   const pauseButton = document.getElementById("pauseButton");
   const resetButton = document.getElementById("resetButton");
+  const modeToggleButton = document.getElementById("modeToggleButton");
   const fullscreenButton = document.getElementById("fullscreenButton");
+  const endGameButton = document.getElementById("endGameButton");
+  const winnerResetButton = document.getElementById("winnerResetButton");
   const winnerOverlay = document.getElementById("winnerOverlay");
   const winnerTitle = document.getElementById("winnerTitle");
   const winnerScore = document.getElementById("winnerScore");
@@ -123,6 +130,11 @@
   const accessCode = document.getElementById("accessCode");
   const accessMessage = document.getElementById("accessMessage");
   const termById = Object.fromEntries(TERMS.map((term) => [term.id, term]));
+  const playerPanels = [
+    document.querySelector(".player-one"),
+    document.querySelector(".player-two")
+  ];
+  const playerNames = playerPanels.map((panel) => panel && panel.querySelector(".player-name"));
 
   const hud = [0, 1].map((index) => ({
     score: document.getElementById(`score-${index}`),
@@ -145,8 +157,10 @@
     celebrationHeight: 1,
     lastFrame: performance.now(),
     round: 1,
+    playerMode: PLAYER_MODE.TWO,
     matchOver: false,
     accessGranted: false,
+    fullscreenWanted: false,
     items: [],
     particles: [],
     feedbacks: [],
@@ -169,6 +183,70 @@
       answerText: "",
       answerTone: ""
     };
+  }
+
+  function isOnePlayerMode() {
+    return state.playerMode === PLAYER_MODE.ONE;
+  }
+
+  function activePlayerIndexes() {
+    return isOnePlayerMode() ? [0] : [0, 1];
+  }
+
+  function activePlayers() {
+    return activePlayerIndexes().map((index) => state.players[index]);
+  }
+
+  function setPlayerMode(mode) {
+    if (state.playerMode === mode) {
+      return;
+    }
+
+    state.playerMode = mode;
+    state.items = state.items.filter((item) => activePlayerIndexes().includes(item.playerIndex));
+    state.trails.clear();
+
+    if (!isOnePlayerMode() && state.players[1].timeLeft <= 0 && state.players[0].timeLeft > 0) {
+      state.players[1].timeLeft = state.players[0].timeLeft;
+      state.players[1].answerText = state.players[1].answerText || "Go";
+      state.players[1].answerTone = "";
+    }
+
+    syncPlayerModeUi();
+    updateAllHud();
+    resizeCanvas();
+  }
+
+  function togglePlayerMode() {
+    setPlayerMode(isOnePlayerMode() ? PLAYER_MODE.TWO : PLAYER_MODE.ONE);
+  }
+
+  function syncPlayerModeUi() {
+    const onePlayer = isOnePlayerMode();
+    arena.classList.toggle("one-player", onePlayer);
+    arena.classList.toggle("two-player", !onePlayer);
+    arena.setAttribute("aria-label", onePlayer ? "One-player game area" : "Two-player game area");
+    document.documentElement.dataset.playerMode = onePlayer ? "one" : "two";
+    document.body.dataset.playerMode = onePlayer ? "one" : "two";
+
+    if (playerNames[0]) {
+      playerNames[0].textContent = onePlayer ? "One Player" : "Player 1";
+    }
+    if (playerPanels[1]) {
+      playerPanels[1].setAttribute("aria-hidden", onePlayer ? "true" : "false");
+    }
+    if (modeToggleButton) {
+      const spans = modeToggleButton.querySelectorAll("span");
+      modeToggleButton.setAttribute("aria-pressed", String(onePlayer));
+      modeToggleButton.setAttribute("aria-label", onePlayer ? "Switch to split-screen mode" : "Switch to One Player Mode");
+      modeToggleButton.title = onePlayer ? "Switch to split-screen mode" : "Switch to One Player Mode";
+      if (spans[0]) {
+        spans[0].textContent = onePlayer ? "2P" : "1P";
+      }
+      if (spans[1]) {
+        spans[1].textContent = onePlayer ? "Two Player" : "One Player";
+      }
+    }
   }
 
   function currentChallenge(player) {
@@ -214,9 +292,11 @@
   }
 
   function resetGame() {
+    const playerMode = state.playerMode;
     state.running = false;
     state.paused = false;
     state.round = 1;
+    state.playerMode = playerMode;
     state.matchOver = false;
     state.items = [];
     state.particles = [];
@@ -228,6 +308,7 @@
     state.players = [createPlayer(0, 0), createPlayer(1, 1)];
     setStartLabel("Start", "\\u25b6");
     setPauseLabel("Pause", "\\u275a\\u275a");
+    syncPlayerModeUi();
     updateAllHud();
   }
 
@@ -242,7 +323,7 @@
 
     state.running = true;
     state.paused = false;
-    state.players.forEach((player) => {
+    activePlayers().forEach((player) => {
       if (!player.answerText) {
         player.answerText = "Go";
         player.answerTone = "";
@@ -322,6 +403,10 @@
   }
 
   function playerBounds(playerIndex) {
+    if (isOnePlayerMode()) {
+      return { left: 0, right: state.width, top: 0, bottom: state.height };
+    }
+
     const half = state.width / 2;
     return playerIndex === 0
       ? { left: 0, right: half, top: 0, bottom: state.height }
@@ -330,7 +415,9 @@
 
   function updateGame(dt) {
     if (state.running && !state.paused) {
-      state.players.forEach((player) => {
+      const players = activePlayers();
+
+      players.forEach((player) => {
         if (player.timeLeft > 0) {
           player.timeLeft = Math.max(0, player.timeLeft - dt);
           player.nextSpawn -= dt;
@@ -349,7 +436,7 @@
         }
       });
 
-      if (state.players.every((player) => player.timeLeft <= 0)) {
+      if (players.every((player) => player.timeLeft <= 0)) {
         if (state.round < TOTAL_ROUNDS) {
           advanceRound();
         } else {
@@ -386,6 +473,19 @@
     state.items = [];
     state.trails.clear();
 
+    if (isOnePlayerMode()) {
+      const player = state.players[0];
+      player.timeLeft = 0;
+      player.answerText = `Final score: ${player.score}. Great game.`;
+      player.answerTone = "done";
+
+      setStartLabel("Restart", "\\u25b6");
+      setPauseLabel("Pause", "\\u275a\\u275a");
+      createWinnerCelebration("GAME COMPLETE", `Score ${player.score}`);
+      updateAllHud();
+      return;
+    }
+
     const scores = state.players.map((player) => player.score);
     const highScore = Math.max(...scores);
     const winnerIndexes = scores
@@ -417,11 +517,20 @@
     const term = useTarget ? termById[targetId] : decoys[Math.floor(Math.random() * decoys.length)];
     const sideWidth = bounds.right - bounds.left;
     const baseSize = Math.min(sideWidth, state.height);
-    const maxRadius = Math.max(70, Math.min(sideWidth * 0.24, state.height * 0.28, 220));
-    const minRadius = Math.min(maxRadius, Math.max(92, baseSize * 0.15, maxRadius * 0.78));
+    const onePlayer = isOnePlayerMode();
+    const maxRadius = onePlayer
+      ? Math.max(72, Math.min(sideWidth * 0.18, state.height * 0.24, 210))
+      : Math.max(70, Math.min(sideWidth * 0.24, state.height * 0.28, 220));
+    const minRadius = Math.min(maxRadius, Math.max(onePlayer ? 86 : 92, baseSize * (onePlayer ? 0.12 : 0.15), maxRadius * 0.72));
     const radius = randomBetween(minRadius, maxRadius);
-    const x = randomBetween(bounds.left + radius + 18, bounds.right - radius - 18);
-    const centerPull = playerIndex === 0 ? randomBetween(30, 130) : randomBetween(-130, -30);
+    const minX = bounds.left + radius + 18;
+    const maxX = bounds.right - radius - 18;
+    const x = maxX > minX ? randomBetween(minX, maxX) : bounds.left + sideWidth / 2;
+    const centerPull = onePlayer
+      ? randomBetween(-90, 90)
+      : playerIndex === 0
+        ? randomBetween(30, 130)
+        : randomBetween(-130, -30);
     const vx = randomBetween(-125, 125) + centerPull * 0.28;
     const vy = -randomBetween(state.height * 0.92, state.height * 1.18);
 
@@ -676,7 +785,9 @@
   }
 
   function drawBackground() {
-    for (let playerIndex = 0; playerIndex < 2; playerIndex += 1) {
+    const playerIndexes = activePlayerIndexes();
+
+    for (const playerIndex of playerIndexes) {
       const bounds = playerBounds(playerIndex);
       const player = state.players[playerIndex];
       const challenge = currentChallenge(player);
@@ -1117,7 +1228,7 @@
       }
     }
 
-    const side = point.x < state.width / 2 ? 0 : 1;
+    const side = isOnePlayerMode() ? 0 : point.x < state.width / 2 ? 0 : 1;
     const now = performance.now();
 
     try {
@@ -1182,7 +1293,8 @@
   }
 
   function checkSlice(x1, y1, x2, y2, side) {
-    if (!state.running || state.paused || state.players[side].timeLeft <= 0) {
+    const player = state.players[side];
+    if (!state.running || state.paused || !player || player.timeLeft <= 0 || (isOnePlayerMode() && side !== 0)) {
       return;
     }
 
@@ -1249,7 +1361,7 @@
   startButton.disabled = true;
   startButton.setAttribute("aria-disabled", "true");
 
-   function endGame() {
+  function endGame() {
     if (!state.running && !state.matchOver) {
       return;
     }
@@ -1259,6 +1371,19 @@
     state.matchOver = true;
     state.items = [];
     state.trails.clear();
+
+    if (isOnePlayerMode()) {
+      const player = state.players[0];
+      player.timeLeft = 0;
+      player.answerText = `Final score: ${player.score}. Game ended.`;
+      player.answerTone = "done";
+
+      setStartLabel("Restart", "\\u25b6");
+      setPauseLabel("Pause", "\\u275a\\u275a");
+      createWinnerCelebration("GAME ENDED", `Score ${player.score}`);
+      updateAllHud();
+      return;
+    }
 
     const scores = state.players.map((player) => player.score);
     
@@ -1274,22 +1399,126 @@
     updateAllHud();
   }
 
+  function isStandaloneDisplay() {
+    return (
+      window.navigator.standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches
+    );
+  }
+
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function syncFullscreenButton() {
+    const fullscreenActive = Boolean(fullscreenElement()) || isStandaloneDisplay();
+    fullscreenButton.setAttribute("aria-pressed", String(fullscreenActive));
+    fullscreenButton.title = fullscreenActive ? "Full screen active" : "Full screen";
+  }
+
+  async function enterFullscreen() {
+    state.fullscreenWanted = true;
+    syncFullscreenButton();
+
+    if (isStandaloneDisplay() || fullscreenElement()) {
+      return;
+    }
+
+    const element = document.documentElement;
+    try {
+      if (element.requestFullscreen) {
+        await element.requestFullscreen({ navigationUI: "hide" });
+      } else if (element.webkitRequestFullscreen) {
+        await element.webkitRequestFullscreen();
+      }
+    } catch (error) {
+      // Some iPad Safari versions only allow fullscreen from a fresh user gesture.
+    }
+
+    syncFullscreenButton();
+  }
+
+  async function exitFullscreen() {
+    state.fullscreenWanted = false;
+
+    try {
+      if (document.exitFullscreen && document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen && document.webkitFullscreenElement) {
+        await document.webkitExitFullscreen();
+      }
+    } catch (error) {
+      // Ignore platform-specific fullscreen failures.
+    }
+
+    syncFullscreenButton();
+  }
+
+  function toggleFullscreen() {
+    if (fullscreenElement() && !isStandaloneDisplay()) {
+      exitFullscreen();
+      return;
+    }
+
+    enterFullscreen();
+  }
+
+  function handleFullscreenChange() {
+    syncFullscreenButton();
+
+    if (!state.fullscreenWanted || fullscreenElement() || isStandaloneDisplay()) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (state.fullscreenWanted && !fullscreenElement() && !isStandaloneDisplay()) {
+        enterFullscreen();
+      }
+    }, 350);
+  }
+
+  function updateViewportHeight() {
+    const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty("--app-height", `${Math.max(1, height)}px`);
+    resizeCanvas();
+  }
+
+  function suppressIOSBottomGesture(event) {
+    const touch = event.touches && event.touches[0] ? event.touches[0] : event.changedTouches && event.changedTouches[0];
+    const y = touch ? touch.clientY : event.clientY || 0;
+    const bottomGuard = Math.max(72, Math.min(136, window.innerHeight * 0.13));
+
+    if (event.cancelable && (event.type === "touchmove" || y > window.innerHeight - bottomGuard)) {
+      event.preventDefault();
+    }
+
+    if (state.fullscreenWanted && !fullscreenElement() && !isStandaloneDisplay()) {
+      enterFullscreen();
+    }
+  }
+
+  function preventDefaultWhenCancelable(event) {
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+  }
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator) || !window.isSecureContext) {
+      return;
+    }
+
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  }
+
   startButton.addEventListener("click", startGame);
   pauseButton.addEventListener("click", togglePause);
   resetButton.addEventListener("click", resetGame);
-  
-  const endGameButton = document.getElementById("endGameButton");
+  modeToggleButton.addEventListener("click", togglePlayerMode);
   endGameButton.addEventListener("click", endGame);
-  fullscreenButton.addEventListener("click", () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  });
+  fullscreenButton.addEventListener("click", toggleFullscreen);
 
-  // FIX: Wire up the Reset Game button inside the winner overlay
-  const winnerResetButton = document.getElementById("winnerResetButton");
   if (winnerResetButton) {
     winnerResetButton.addEventListener("click", resetGame);
   }
@@ -1299,9 +1528,21 @@
   canvas.addEventListener("pointerup", handlePointerEnd, { passive: false });
   canvas.addEventListener("pointercancel", handlePointerEnd, { passive: false });
 
-  window.addEventListener("resize", resizeCanvas);
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+  document.addEventListener("touchstart", suppressIOSBottomGesture, { passive: false, capture: true });
+  document.addEventListener("touchmove", suppressIOSBottomGesture, { passive: false, capture: true });
+  document.addEventListener("gesturestart", preventDefaultWhenCancelable, { passive: false });
+  document.addEventListener("contextmenu", preventDefaultWhenCancelable);
 
-  resizeCanvas();
+  window.addEventListener("resize", updateViewportHeight);
+  window.addEventListener("orientationchange", () => window.setTimeout(updateViewportHeight, 250));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updateViewportHeight);
+  }
+
+  registerServiceWorker();
+  updateViewportHeight();
   resetGame();
   loadImages().then(() => {
     state.ready = true;
@@ -1311,42 +1552,3 @@
   });
   requestAnimationFrame(loop);
 })();
-
-  function isStandaloneIOS() {
-    return (
-      window.navigator.standalone === true ||
-      window.matchMedia("(display-mode: standalone)").matches
-    );
-  }
-
-  async function enterFullscreen() {
-    const el = document.documentElement;
-    try {
-      if (el.requestFullscreen) {
-        await el.requestFullscreen({ navigationUI: "hide" });
-      } else if (el.webkitRequestFullscreen) {
-        await el.webkitRequestFullscreen();
-      }
-    } catch (e) {}
-  }
-
-  async function exitFullscreen() {
-    try {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        await document.webkitExitFullscreen();
-      }
-    } catch (e) {}
-  }
-
-  function suppressIOSBottomGesture(e) {
-    const h = window.innerHeight;
-    const y = e.touches?.[0]?.clientY ?? e.clientY ?? 0;
-    if (y > h - 60) {
-      e.preventDefault();
-    }
-  }
-
-  document.addEventListener("touchstart", suppressIOSBottomGesture, { passive: false });
-  document.addEventListener("touchmove", suppressIOSBottomGesture, { passive: false });
